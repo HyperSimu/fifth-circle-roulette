@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>5度圏ルーレット</title>
+
+	<style>
+		body {
+			margin: 0;
+			height: 100vh;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			align-items: center;
+			font-family: sans-serif;
+			background: #f5f5f5;
+		}
+
+		h1 {
+			margin-bottom: 30px;
+		}
+
+		#result {
+			font-size: 48px;
+			font-weight: bold;
+			margin: 30px;
+		}
+
+		button {
+			font-size: 24px;
+			padding: 15px 40px;
+			border: none;
+			border-radius: 12px;
+			background: #333;
+			color: white;
+		}
+
+		button:active {
+			transform: scale(0.95);
+		}
+	</style>
+</head>
+
+<body>
+
+	<h1>5度圏ルーレット</h1>
+
+	<div id="result">？</div>
+
+	<button onclick="roulette()">START</button>
+
+	<script>
+		const keys = [
+			"C",
+			"G",
+			"D",
+			"A",
+			"E",
+			"B",
+			"F♯ / G♭",
+			"D♭",
+			"A♭",
+			"E♭",
+			"B♭",
+			"F"
+		];
+
+		function roulette() {
+			const index = Math.floor(Math.random() * keys.length);
+			document.getElementById("result").textContent = keys[index];
+		}
+	</script>
+
+</body>
+
+</html>
