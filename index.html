@@ -1,78 +1,143 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>5度圏ルーレット</title>
-
-	<style>
-		body {
-			margin: 0;
-			height: 100vh;
-			display: flex;
-			flex-direction: column;
-			justify-content: center;
-			align-items: center;
-			font-family: sans-serif;
-			background: #f5f5f5;
-		}
-
-		h1 {
-			margin-bottom: 30px;
-		}
-
-		#result {
-			font-size: 48px;
-			font-weight: bold;
-			margin: 30px;
-		}
-
-		button {
-			font-size: 24px;
-			padding: 15px 40px;
-			border: none;
-			border-radius: 12px;
-			background: #333;
-			color: white;
-		}
-
-		button:active {
-			transform: scale(0.95);
-		}
-	</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>五度圏ルーレット</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
+  <main>
+    <h1>五度圏ルーレット</h1>
+    <p>外側(緑)が長調、内側(赤)が短調です</p>
+    <div class="circle">
+      <div class="disc">
+        <div class="ring major-ring"></div>
+        <div class="ring minor-ring"></div>
+        <div id="major-highlight" class="highlight-sector major-highlight" aria-hidden="true"></div>
+        <div id="minor-highlight" class="highlight-sector minor-highlight" aria-hidden="true"></div>
+        <div id="images" class="images"></div>
+        <div id="majors"></div>
+        <div id="minors"></div>
+        <div class="center">
+          <small>選ばれた調</small>
+          <strong id="result">C</strong>
+        </div>
+      </div>
+    </div>
+    <button id="spin" type="button">START</button>
+    <footer>
+      調号画像：Rettinghaus / <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">CC BY 4.0</a><br>
+      出典：<a href="https://commons.wikimedia.org/" target="_blank">Wikimedia Commons</a>（本アプリ用に改変）
+    </footer>
+  </main>
+  <script>
+    // 調の表示データ。順番は五度圏上の時計回りの順番です。
+    // 表記や画像ファイル名を変更する場合は、この配列だけを編集します。
+    const keys = [
+      ['C', 'a', 'C-major_a-minor.svg'], ['G', 'e', 'G-major_e-minor.svg'],
+      ['D', 'b', 'D-major_b-minor.svg'], ['A', 'f♯', 'A-major_f-sharp-minor.svg'],
+      ['E', 'c♯', 'E-major_c-sharp-minor.svg'], ['B', 'g♯', 'B-major_g-sharp-minor.svg'],
+      ['G♭', 'e♭', 'G-flat-major_e-flat-minor.svg'], ['D♭', 'b♭', 'D-flat-major_b-flat-minor.svg'],
+      ['A♭', 'f', 'A-flat-major_f-minor.svg'], ['E♭', 'c', 'E-flat-major_c-minor.svg'],
+      ['B♭', 'g♯', 'B-flat-major_g-minor.svg'], ['F', 'd', 'F-major_d-minor.svg']
+    ];
+    // 画面上の各レイヤーを取得します。
+    const majors = document.querySelector('#majors');
+    const minors = document.querySelector('#minors');
+    const images = document.querySelector('#images');
+    const majorHighlight = document.querySelector('#major-highlight');
+    const minorHighlight = document.querySelector('#minor-highlight');
+    const result = document.querySelector('#result');
+    const spin = document.querySelector('#spin');
+    // 円の中心からの距離を percentage で指定して、調を円周上に配置します。
+    // 長調・短調・調号画像の位置を調整するときは、呼び出し側の radius を変更します。
+    function position(element, radius, index) {
+      element.style.left = `${50 + radius * Math.sin(index * Math.PI / 6)}%`;
+      element.style.top = `${50 - radius * Math.cos(index * Math.PI / 6)}%`;
+    }
+    // 長調、短調、調号画像を12個ずつ生成します。
+    keys.forEach((key, index) => {
+      const major = document.createElement('button');
+      major.className = 'key major-key';
+      position(major, 28, index);
+      major.innerHTML = `<strong>${key[0]}</strong>`;
+      major.onclick = () => selectKey(index, false);
+      majors.append(major);
+      const minor = document.createElement('button');
+      minor.className = 'key minor-key';
+      position(minor, 18, index);
+      minor.innerHTML = `<strong>${key[1]}</strong>`;
+      minor.onclick = () => selectKey(index, true);
+      minors.append(minor);
+      const image = document.createElement('img');
+      image.src = `img/${key[2]}`;
+      position(image, 42, index);
+      images.append(image);
+    });
+    // 現在のハイライト角度。30度ずつ進めると次の調になります。
+    let rotation = 0;
 
-	<h1>5度圏ルーレット</h1>
+    // 調名と中央の結果表示を更新します。
+    function selectKey(index, minor) {
+      document.querySelectorAll('.key').forEach((element) => element.classList.remove('selected'));
+      (minor ? minors : majors).children[index].classList.add('selected');
+      const label = minor ? keys[index][1] : keys[index][0];
+      result.textContent = label;
+      result.classList.toggle('compact', label.length === 2);
+    }
 
-	<div id="result">？</div>
-
-	<button onclick="roulette()">START</button>
-
-	<script>
-		const keys = [
-			"C",
-			"G",
-			"D",
-			"A",
-			"E",
-			"B",
-			"F♯ / G♭",
-			"D♭",
-			"A♭",
-			"E♭",
-			"B♭",
-			"F"
-		];
-
-		function roulette() {
-			const index = Math.floor(Math.random() * keys.length);
-			document.getElementById("result").textContent = keys[index];
-		}
-	</script>
-
+    // 新しい抽選を始める前に、前回の結果と選択状態を消去します。
+    function resetSelection() {
+      result.textContent = '？';
+      result.classList.remove('compact');
+      document.querySelectorAll('.key').forEach((element) => element.classList.remove('selected'));
+      majorHighlight.classList.remove('active');
+      minorHighlight.classList.remove('active');
+      majorHighlight.style.transform = 'rotate(0deg)';
+      minorHighlight.style.transform = 'rotate(0deg)';
+      document.querySelector('.disc').classList.remove('major-selected', 'minor-selected');
+    }
+    // STARTボタンは、調性（長調・短調）の決定と調の決定を2段階で行います。
+    spin.onclick = () => {
+      resetSelection();
+      spin.disabled = true;
+      spin.textContent = '長調・短調を選択中…';
+      const disc = document.querySelector('.disc');
+      disc.classList.add('selection-phase');
+      let flashes = 0;
+      const flashTimer = setInterval(() => {
+        disc.classList.toggle('minor-flash');
+        flashes += 1;
+        if (flashes >= 8) {
+          clearInterval(flashTimer);
+          const minor = Math.random() < 0.5;
+          disc.classList.remove('selection-phase', 'minor-flash');
+          disc.classList.add(minor ? 'minor-selected' : 'major-selected');
+          spinKey(minor);
+        }
+      }, 260);
+    };
+    function spinKey(minor) {
+      spin.textContent = '回転中…';
+      const index = Math.floor(Math.random() * keys.length);
+      rotation += 1800 + (index * 30 - rotation % 360 + 360) % 360;
+      const activeHighlight = minor ? minorHighlight : majorHighlight;
+      const inactiveHighlight = minor ? majorHighlight : minorHighlight;
+      activeHighlight.style.transform = `rotate(${rotation}deg)`;
+      inactiveHighlight.style.transform = 'rotate(0deg)';
+      activeHighlight.classList.add('active');
+      inactiveHighlight.classList.remove('active');
+      setTimeout(() => {
+        selectKey(index, minor);
+        spin.disabled = false;
+        spin.textContent = 'もう一度回す';
+      }, 3200);
+    }
+    selectKey(0, false);
+  </script>
 </body>
 
 </html>
