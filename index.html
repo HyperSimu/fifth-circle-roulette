@@ -33,6 +33,17 @@
       出典：<a href="https://commons.wikimedia.org/" target="_blank">Wikimedia Commons</a>（本アプリ用に改変）
     </footer>
   </main>
+  <div id="result-popup" class="result-popup" aria-live="assertive" aria-hidden="true">
+    <div class="result-popup-card">
+      <small>今日のスケール！</small>
+      <div class="popup-key">
+        <img id="popup-image" alt="">
+        <strong id="popup-result">？</strong>
+      </div>
+      <div id="popup-info" class="popup-info"></div>
+      <button id="reset" type="button">リセット</button>
+    </div>
+  </div>
   <script>
     // 調の表示データ。順番は五度圏上の時計回りの順番です。
     // 表記や画像ファイル名を変更する場合は、この配列だけを編集します。
@@ -51,7 +62,26 @@
     const majorHighlight = document.querySelector('#major-highlight');
     const minorHighlight = document.querySelector('#minor-highlight');
     const result = document.querySelector('#result');
+    const resultPopup = document.querySelector('#result-popup');
+    const popupResult = document.querySelector('#popup-result');
+    const popupImage = document.querySelector('#popup-image');
+    const popupInfo = document.querySelector('#popup-info');
+    const reset = document.querySelector('#reset');
     const spin = document.querySelector('#spin');
+
+    // 調ごとの練習本情報。ページ番号や曲名をここへ入力するとポップアップに表示されます。
+    const practiceInfo = {
+      C: '3D 18ページ', G: '3D 24ページ', D: '3D 26ページ', A: '3D 28ページ', E: '3D DLC 1ページ', B: '', 'G♭': '3D 22ページ', 'D♭': '3D 20ページ',
+      'A♭': '3D 16ページ', 'E♭': '3D 12ページ', 'B♭': '3D 10ページ', F: '3D 14ページ',
+      a: '3D 19ページ', e: '3D 25ページ', b: '3D 27ページ', 'f♯': '3D 29ページ', 'c♯': '3D DLC 2ページ', 'g♯': '', 'e♭': '3D 23ページ',
+      'b♭': '3D 21ページ', f: '3D 17ページ', c: '3D 13ページ', g: '3D 11ページ', d: '3D 15ページ'
+    };
+    const majorSound = new Audio('sound/select-maj.mp3');
+    const minorSound = new Audio('sound/select-min.mp3');
+    const drumrollSound = new Audio('sound/drumroll.mp3');
+    const resultSound = new Audio('sound/result.mp3');
+    // ドラムロールはシンバルまで含む完成した1回分の音源です。
+    drumrollSound.loop = false;
     // 円の中心からの距離を percentage で指定して、調を円周上に配置します。
     // 長調・短調・調号画像の位置を調整するときは、呼び出し側の radius を変更します。
     function position(element, radius, index) {
@@ -96,6 +126,9 @@
     function resetSelection() {
       result.textContent = '？';
       result.classList.remove('compact');
+      result.classList.remove('sharp');
+      resultPopup.classList.remove('visible');
+      resultPopup.setAttribute('aria-hidden', 'true');
       document.querySelectorAll('.key').forEach((element) => element.classList.remove('selected'));
       majorHighlight.classList.remove('active');
       minorHighlight.classList.remove('active');
@@ -103,6 +136,12 @@
       minorHighlight.style.transform = 'rotate(0deg)';
       document.querySelector('.disc').classList.remove('major-selected', 'minor-selected');
     }
+
+    reset.onclick = () => {
+      resetSelection();
+      spin.disabled = false;
+      spin.textContent = 'START';
+    };
     // STARTボタンは、調性（長調・短調）の決定と調の決定を2段階で行います。
     spin.onclick = () => {
       resetSelection();
@@ -110,21 +149,29 @@
       spin.textContent = '長調・短調を選択中…';
       const disc = document.querySelector('.disc');
       disc.classList.add('selection-phase');
+      // 最初の切り替えで長調側になるよう、短調状態から開始します。
+      disc.classList.add('minor-flash');
       let flashes = 0;
       const flashTimer = setInterval(() => {
-        disc.classList.toggle('minor-flash');
+        const isMinor = disc.classList.toggle('minor-flash');
+        const selectionSound = isMinor ? minorSound : majorSound;
+        selectionSound.currentTime = 0;
+        selectionSound.play().catch(() => { });
         flashes += 1;
         if (flashes >= 8) {
           clearInterval(flashTimer);
           const minor = Math.random() < 0.5;
           disc.classList.remove('selection-phase', 'minor-flash');
           disc.classList.add(minor ? 'minor-selected' : 'major-selected');
-          spinKey(minor);
+          spin.textContent = minor ? '短調に決定' : '長調に決定';
+          setTimeout(() => spinKey(minor), 500);
         }
       }, 260);
     };
     function spinKey(minor) {
       spin.textContent = '回転中…';
+      drumrollSound.currentTime = 0;
+      drumrollSound.play().catch(() => { });
       const index = Math.floor(Math.random() * keys.length);
       rotation += 1800 + (index * 30 - rotation % 360 + 360) % 360;
       const activeHighlight = minor ? minorHighlight : majorHighlight;
@@ -135,10 +182,23 @@
       inactiveHighlight.classList.remove('active');
       setTimeout(() => {
         selectKey(index, minor);
+        // 円内に結果を表示してから0.8秒待ち、ポップアップと決定音を出します。
+        setTimeout(() => {
+          popupResult.textContent = result.textContent;
+          popupResult.className = result.className;
+          popupImage.src = `img/${keys[index][2]}`;
+          popupImage.alt = `${result.textContent} の調号`;
+          popupInfo.textContent = practiceInfo[result.textContent] || '';
+          resultPopup.classList.add('visible');
+          resultPopup.setAttribute('aria-hidden', 'false');
+          resultSound.currentTime = 0;
+          resultSound.play().catch(() => { });
+        }, 800);
         spin.disabled = false;
         spin.textContent = 'もう一度回す';
       }, 3200);
     }
+
     selectKey(0, false);
   </script>
 </body>
