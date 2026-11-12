@@ -82,8 +82,32 @@
     const minorSound = new Audio('sound/select-min.mp3');
     const drumrollSound = new Audio('sound/drumroll.mp3');
     const resultSound = new Audio('sound/result.mp3');
-    // ドラムロールはシンバルまで含む完成した1回分の音源です。
-    drumrollSound.loop = false;
+    const audioFiles = [majorSound, minorSound, drumrollSound, resultSound];
+    audioFiles.forEach((audio) => {
+      audio.preload = 'auto';
+      audio.load();
+    });
+    let audioUnlocked = false;
+
+
+    // iPad Safariの再生制限を、最初のSTART操作で解除します。
+    async function unlockAudio() {
+      if (audioUnlocked) return;
+      const originalVolumes = audioFiles.map((audio) => audio.volume);
+      audioFiles.forEach((audio) => {
+        audio.volume = 0;
+      });
+      const warmup = audioFiles.map((audio) => audio.play().catch(() => { }));
+      await Promise.all(warmup);
+      // iPad Safariのデコーダーが音声データを展開する時間を確保します。
+      await new Promise((resolve) => setTimeout(resolve, 350));
+      audioFiles.forEach((audio) => {
+        audio.pause();
+        audio.currentTime = 0;
+      });
+      audioFiles.forEach((audio, index) => { audio.volume = originalVolumes[index]; });
+      audioUnlocked = true;
+    }
     // 円の中心からの距離を percentage で指定して、調を円周上に配置します。
     // 長調・短調・調号画像の位置を調整するときは、呼び出し側の radius を変更します。
     function position(element, radius, index) {
@@ -145,7 +169,8 @@
       spin.textContent = 'START';
     };
     // STARTボタンは、調性（長調・短調）の決定と調の決定を2段階で行います。
-    spin.onclick = () => {
+    spin.onclick = async () => {
+      await unlockAudio();
       resetSelection();
       spin.disabled = true;
       spin.textContent = '長調・短調を選択中…';
@@ -201,7 +226,8 @@
       }, 3200);
     }
 
-    selectKey(0, false);
+    // ページ読み込み時は、前回の結果を持たない初期状態にします。
+    resetSelection();
   </script>
 </body>
 
